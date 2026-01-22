@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: safetynet
+
+server:
+  port: 9011
