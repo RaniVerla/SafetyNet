@@ -26,7 +26,7 @@ public class PersonController {
     }
 
 
-    @GetMapping("/list/persons")
+    @GetMapping("/person")
     public List<Person> getAllPersons()
     {
         return personService.getAllPersons();
