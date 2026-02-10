@@ -1,6 +1,8 @@
 package net.example.safetynet.service;
 
+
 import lombok.extern.slf4j.Slf4j;
+import net.example.safetynet.model.Medicalrecord;
 import net.example.safetynet.model.Person;
 import net.example.safetynet.utils.ReadFromFileUtil;
 import net.example.safetynet.utils.WriteToFileUtil;
@@ -12,35 +14,34 @@ import java.util.Set;
 
 @Slf4j
 @Service
-public class PersonService {
+public class MedicalRecordService {
+
     private final ReadFromFileUtil readFromFileUtil;
     private final WriteToFileUtil writeToFileUtil;
 
-    String filePath="src/main/resources/safetynet/person.json";
+    String filePath="src/main/resources/safetynet/medicalrecord.json";
 
-    public PersonService(ReadFromFileUtil readFromFileUtil, WriteToFileUtil writeToFileUtil) {
+    public MedicalRecordService(ReadFromFileUtil readFromFileUtil, WriteToFileUtil writeToFileUtil) {
         this.readFromFileUtil = readFromFileUtil;
         this.writeToFileUtil = writeToFileUtil;
     }
 
-    public ResponseEntity<String> addPerson(Person person) {
+    public ResponseEntity<String> addMedicalRecord(Medicalrecord medicalrecord) {
 
         try{
-            Set<Person> personList=readFromFileUtil.readFromFile(filePath);
-            personList.add(person);
-            writeToFileUtil.writeToFile(personList,filePath);
-            return ResponseEntity.status(HttpStatus.CREATED).body("Person added successfully");
+            Set<Medicalrecord> medicalrecordList=readFromFileUtil.readFromFile(filePath);
+            medicalrecordList.add(medicalrecord);
+            writeToFileUtil.writeToFile(medicalrecordList,filePath);
+            return ResponseEntity.status(HttpStatus.CREATED).body("Medical Record added successfully");
         }
         catch (Exception e)
         {
             log.error("Error occurred while writing to file :{}" ,e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error saving person :" +e.getMessage());
         }
-
-
     }
 
-    public Set<Person> getAllPersons() {
-       return readFromFileUtil.readFromFile(filePath);
+    public Set<Medicalrecord> getMedicalRecords() {
+        return readFromFileUtil.readFromFile(filePath);
     }
 }

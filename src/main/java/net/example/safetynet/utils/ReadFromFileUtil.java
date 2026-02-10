@@ -5,20 +5,20 @@ import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 
 import java.io.File;
-import java.util.ArrayList;
+import java.util.HashSet;
 
 @Component
 public class ReadFromFileUtil {
 
-    public <T> ArrayList<T>  readFromFile(String filePath)
+    public <T> HashSet<T> readFromFile(String filePath)
     {
         ObjectMapper mapper=new ObjectMapper();
         File file=new File(filePath);
         if(!file.exists() || file.length()==0)
         {
-            return new ArrayList<>();
+            return new HashSet<>();
         }
-        return mapper.readValue(file, new TypeReference<ArrayList<T>>() {
+        return mapper.readValue(file, new TypeReference<HashSet<T>>() {
         });
     }
 }

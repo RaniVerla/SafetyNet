@@ -5,29 +5,28 @@ import net.example.safetynet.model.Person;
 import net.example.safetynet.service.PersonService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import java.util.Set;
 
+@RequestMapping("/v1")
 @RestController
 public class PersonController {
 
     @Autowired
     PersonService personService;
 
+    //Done
     @PostMapping("/person")
-    public ResponseEntity<String> addPerson(@RequestBody List<Person> persons)
+    public ResponseEntity<String> addPerson(@RequestBody Person person)
     {
-       return personService.addPerson(persons);
+       return personService.addPerson(person);
 
     }
 
 
     @GetMapping("/person")
-    public List<Person> getAllPersons()
+    public Set<Person> getAllPersons()
     {
         return personService.getAllPersons();
     }
