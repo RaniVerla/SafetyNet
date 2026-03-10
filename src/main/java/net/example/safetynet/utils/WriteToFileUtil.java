@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
 
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.List;
@@ -13,16 +14,20 @@ import java.util.Set;
 @Component
 public class WriteToFileUtil {
 
-    public <T> void writeToFile(Set<T> objects, String filePath)
-    {
-        try(FileWriter file=new FileWriter(filePath)){
+    private final ObjectMapper mapper = new ObjectMapper();
 
-            ObjectMapper mapper = new ObjectMapper();
-            String jsonString = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(objects);
-            file.write(jsonString);
+    public <T> void writeToFile(List<T> objects, File filePath) {
+        try {
+            if (!filePath.exists()) {
+                boolean created = filePath.mkdirs();
+                log.info("created directory :{}c -sucess", filePath.getAbsolutePath());
+            }
 
-        }catch(IOException e)
-        {
+            mapper.writerWithDefaultPrettyPrinter().writeValue(filePath, objects);
+
+            log.info("Successfully updated the file :{}", filePath.getAbsolutePath());
+
+        } catch (Exception e) {
             log.error(e.getMessage());
         }
     }
