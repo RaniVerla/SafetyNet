@@ -21,7 +21,6 @@ public class MedicalRecordController {
      * Creating get method for Medicalrecord controller
      *
      * @param medicalrecord
-     * @param lastName
      * @return
      */
     @PostMapping("/medicalrecord")
@@ -49,22 +48,19 @@ public class MedicalRecordController {
     /**
      * Creating Delete method for Medicalrecord controller
      *
-     * @param medicalrecord
      * @param lastName
      * @return
      */
     @DeleteMapping("/medicalrecord/{lastName}/{firstName}")
     public ResponseEntity<String> deleteMedicalRecord(@PathVariable String lastName,
                                                       @PathVariable String firstName) {
-        return medicalRecordService.deleteMedicalRecord(firstName, lastName);
+        return medicalRecordService.deleteMedicalRecord(lastName,firstName);
 
     }
 
     /**
      * Creating get method for Medicalrecord controller
      *
-     * @param medicalrecord
-     * @param lastName
      * @return
      */
     @GetMapping("/medicalrecord")

@@ -21,19 +21,17 @@ import static org.mockito.Mockito.*;
 class PersonControllerTest {
 
     @Mock
-    private PersonService personService ;
+    private PersonService personService;
 
     @InjectMocks
-    private PersonController controller ;
+    private PersonController controller;
 
     @Test
     void addPerson_directCall() {
 
         Person person = new Person();
 
-        when(personService.addPerson(any()))
-                .thenReturn(ResponseEntity.status(HttpStatus.CREATED)
-                        .body("Person added successfully"));
+        when(personService.addPerson(any())).thenReturn(ResponseEntity.status(HttpStatus.CREATED).body("Person added successfully"));
 
         ResponseEntity<String> response = controller.addPerson(person);
 
@@ -46,34 +44,27 @@ class PersonControllerTest {
 
         Person person = new Person();
 
-        when(personService.updatePerson(any(), any(), any()))
-                .thenReturn(ResponseEntity.ok("Person updated successfully"));
+        when(personService.updatePerson(any(), any(), any())).thenReturn(ResponseEntity.ok("Person updated successfully"));
 
-        ResponseEntity<String> response =
-                controller.updatePerson(person, "Boyd", "John");
+        ResponseEntity<String> response = controller.updatePerson(person, "Boyd", "John");
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals("Person updated successfully", response.getBody());
 
-        verify(personService, times(1))
-                .updatePerson(person, "Boyd", "John");
+        verify(personService, times(1)).updatePerson(person, "Boyd", "John");
     }
 
     @Test
     void deletePerson_directCall() {
 
-        when(personService.deletePerson(any(), any()))
-                .thenReturn(ResponseEntity.status(HttpStatus.NO_CONTENT)
-                        .body("Person deleted successfully"));
+        when(personService.deletePerson(any(), any())).thenReturn(ResponseEntity.status(HttpStatus.NO_CONTENT).body("Person deleted successfully"));
 
-        ResponseEntity<String> response =
-                controller.deletePerson("Boyd", "John");
+        ResponseEntity<String> response = controller.deletePerson("Boyd", "John");
 
         assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
         assertEquals("Person deleted successfully", response.getBody());
 
-        verify(personService, times(1))
-                .deletePerson("Boyd", "John");
+        verify(personService, times(1)).deletePerson("Boyd", "John");
     }
 
     @Test

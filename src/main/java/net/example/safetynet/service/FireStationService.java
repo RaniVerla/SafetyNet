@@ -93,7 +93,7 @@ public class FireStationService {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Firestation with name " + station + " doesn't exists");
             }
         } catch (Exception e) {
-            log.error("Error occurred while writing to file :{}", e.getStackTrace());
+            log.error("Error occurred while writing to file :{}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error deleting Firestation :" + e.getMessage());
         }
     }
