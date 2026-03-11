@@ -21,8 +21,6 @@ public class FireStationController {
     /**
      * Creating POST method for Firestation controller
      *
-     * @param Firestation
-     * @return
      */
     @PostMapping("/firestation")
     public ResponseEntity<String> addFireStation(@RequestBody Firestation firestation) {
@@ -32,10 +30,6 @@ public class FireStationController {
 
     /**
      * Creating put method for Firestation controller
-     *
-     * @param Firestation
-     * @param station
-     * @return
      */
     @PutMapping("/firestation/{station}")
     public ResponseEntity<String> updateFireStation(@RequestBody Firestation firestation, @PathVariable String station) {
@@ -44,10 +38,6 @@ public class FireStationController {
 
     /**
      * Creating delete method for Firestation controller
-     *
-     * @param Firestation
-     * @param station
-     * @return
      */
     @DeleteMapping("/firestation/{station}")
     public ResponseEntity<String> deleteFireStation(@PathVariable String station) {
@@ -57,10 +47,6 @@ public class FireStationController {
 
     /**
      * Creating GET method for Firestation controller
-     *
-     * @param Firestation
-     * @param station
-     * @return
      */
     @GetMapping("/firestation")
     public List<Firestation> getFireStations() {

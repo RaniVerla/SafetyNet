@@ -65,14 +65,14 @@ class FireStationControllerTest {
     void deleteFirestation_directCall() {
 
 
-        when(fireStationService.addFireStation(any()))
+        when(fireStationService.deleteFireStation(any()))
                 .thenReturn(ResponseEntity.status(HttpStatus.NO_CONTENT)
-                        .body("Fire station deleted successfully"));
+                        .body("Fire Station deleted successfully"));
 
         ResponseEntity<String> response = fireStationController.deleteFireStation("123");
 
         assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
-        assertEquals("Fire station deleted successfully", response.getBody());
+        assertEquals("Fire Station deleted successfully", response.getBody());
 
         verify(fireStationService, times(1))
                 .deleteFireStation("123");

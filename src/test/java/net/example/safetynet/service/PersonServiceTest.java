@@ -51,7 +51,7 @@ class PersonServiceTest {
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
 
         verify(readFromFileUtil, times(1))
-                .readFromFile(any(),any());
+                .readFromFile(any(), any());
 
         verify(writeToFileUtil, times(1))
                 .writeToFile(any(), any());
@@ -66,7 +66,7 @@ class PersonServiceTest {
                 "1509 Culver St", "Culver", "97451",
                 "841-874-6512", "john@email.com");
 
-        when(readFromFileUtil.readFromFile(any(),any()))
+        when(readFromFileUtil.readFromFile(any(), any()))
                 .thenReturn(null);
 
         ResponseEntity<String> response =
@@ -82,7 +82,7 @@ class PersonServiceTest {
         List<Person> persons = new ArrayList<>();
         persons.add(new Person("John", "Boyd", "1509 Culver St", "Culver", "97451", "841-874-6512", "john@email.com"));
 
-        when(readFromFileUtil.<Person>readFromFile(any(),any())).thenReturn(persons);
+        when(readFromFileUtil.<Person>readFromFile(any(), any())).thenReturn(persons);
         doNothing().when(writeToFileUtil).writeToFile(any(), any());
 
         ResponseEntity<String> response = personService.deletePerson("Boyd", "John");
@@ -99,7 +99,7 @@ class PersonServiceTest {
         persons.add(new Person("John", "Boyd", "1509 Culver St", "Culver", "97451",
                 "841-874-6512", "john@email.com"));
 
-        when(readFromFileUtil.<Person>readFromFile(any(),any())).thenReturn(persons);
+        when(readFromFileUtil.<Person>readFromFile(any(), any())).thenReturn(persons);
 
         // Act
         List<Person> result = personService.getAllPersons();
@@ -110,7 +110,7 @@ class PersonServiceTest {
         assertEquals("Boyd", result.get(0).getLastName());
 
         // Optional: verify readFromFile was called
-        verify(readFromFileUtil, times(1)).readFromFile(any(),any());
+        verify(readFromFileUtil, times(1)).readFromFile(any(), any());
     }
 
 
@@ -128,7 +128,7 @@ class PersonServiceTest {
                 "New Address", "Culver", "97451",
                 "841-874-6512", "john@email.com");
 
-        when(readFromFileUtil.<Person>readFromFile(any(),any()))
+        when(readFromFileUtil.<Person>readFromFile(any(), any()))
                 .thenReturn(persons);
 
         doNothing().when(writeToFileUtil).writeToFile(any(), any());
@@ -144,5 +144,17 @@ class PersonServiceTest {
         // Verify write called
         verify(writeToFileUtil, times(1)).writeToFile(any(), any());
 
+    }
+
+    @Test
+    void deleteFireStation_notFound() {
+
+        when(readFromFileUtil.readFromFile(any(), any()))
+                .thenReturn(new ArrayList<>());
+
+        ResponseEntity<String> response =
+                personService.deletePerson("lname","fname");
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
     }
 }
