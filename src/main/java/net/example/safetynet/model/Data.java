@@ -2,13 +2,12 @@ package net.example.safetynet.model;
 
 
 import lombok.AllArgsConstructor;
-import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Data
+@lombok.Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class data {
+public class Data {
 
     private Person persons;
     private Firestation firestations;

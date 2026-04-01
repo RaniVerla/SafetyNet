@@ -36,7 +36,7 @@ class FireStationServiceTest {
     @DisplayName("Testing the success path")
     void addFireStation() throws Exception {
 
-        Firestation newFireStation = new Firestation("stn1", "1509 Culver St");
+        Firestation newFireStation = new Firestation("1509 Culver St", 1);
 
 
         doNothing().when(writeToFileUtil)
@@ -58,7 +58,7 @@ class FireStationServiceTest {
     @DisplayName("Testing the Internal server error")
     void addFirestation_5XX_Error() throws Exception {
 
-        Firestation newFireStation = new Firestation("stn1", "1509 Culver St");
+        Firestation newFireStation = new Firestation("1509 Culver St", 1);
 
         when(readFromFileUtil.readFromFile(any(), any()))
                 .thenReturn(null);
@@ -73,7 +73,7 @@ class FireStationServiceTest {
     void deleteFireStation_success() {
 
         Firestation existing = new Firestation();
-        existing.setStation("1");
+        existing.setStation(1);
 
         List<Firestation> list = new ArrayList<>();
         list.add(existing);
@@ -110,13 +110,13 @@ class FireStationServiceTest {
     void updateFireStation_success() {
 
         Firestation existing = new Firestation();
-        existing.setStation("1");
+        existing.setStation(1);
 
         List<Firestation> list = new ArrayList<>();
         list.add(existing);
 
         Firestation updated = new Firestation();
-        updated.setStation("1");
+        updated.setStation(1);
         updated.setAddress("New Address");
 
         when(readFromFileUtil.readFromFile(any(), any()))

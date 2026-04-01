@@ -2,7 +2,6 @@ package net.example.safetynet.controller;
 
 
 import net.example.safetynet.model.Medicalrecord;
-import net.example.safetynet.model.Person;
 import net.example.safetynet.service.MedicalRecordService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -18,10 +17,7 @@ public class MedicalRecordController {
     private MedicalRecordService medicalRecordService;
 
     /**
-     * Creating get method for Medicalrecord controller
-     *
-     * @param medicalrecord
-     * @return
+     * Creating get method for Medicalrecord controller     *
      */
     @PostMapping("/medicalrecord")
     public ResponseEntity<String> addMedicalRecord(@RequestBody Medicalrecord medicalrecord) {
@@ -33,9 +29,6 @@ public class MedicalRecordController {
     /**
      * Creating put method for Medicalrecord controller
      *
-     * @param medicalrecord
-     * @param lastName
-     * @return
      */
     @PutMapping("/medicalrecord/{lastName}/{firstName}")
     public ResponseEntity<String> updateMedicalRecord(@RequestBody Medicalrecord medicalrecord, @PathVariable String lastName,
@@ -61,7 +54,6 @@ public class MedicalRecordController {
     /**
      * Creating get method for Medicalrecord controller
      *
-     * @return
      */
     @GetMapping("/medicalrecord")
     public List<Medicalrecord> getAllPersons() {

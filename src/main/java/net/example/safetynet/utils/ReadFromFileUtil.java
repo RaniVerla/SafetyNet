@@ -6,7 +6,7 @@ import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 
 import java.io.File;
-import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,6 +37,19 @@ public class ReadFromFileUtil {
             log.error("Error reading from file :{}", ex.getMessage());
             throw ex;
         }
+    }
+
+    public <T> List<T> readFromInputStream(InputStream inputStream, TypeReference<List<T>> typeReference) {
+        try {
+            return mapper.readValue(inputStream, typeReference);
+        } catch (Exception ex) {
+            log.error("Error reading from input stream :{}", ex.getMessage());
+            throw ex;
+        }
+    }
+
+    public ObjectMapper getMapper() {
+        return mapper;
     }
 
 }

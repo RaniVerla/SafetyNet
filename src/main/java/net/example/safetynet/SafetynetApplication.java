@@ -10,4 +10,5 @@ public class SafetynetApplication {
 		SpringApplication.run(SafetynetApplication.class, args);
 	}
 
+
 }
