@@ -225,6 +225,58 @@ public class FireStationService {
     }
 
     /**
+     * Get phone numbers of residents served by a fire station
+     *
+     * @param stationNumber the station number
+     * @return list of phone numbers of residents served by the fire station
+     */
+    public List<String> getPhoneNumbersByStationNumber(String stationNumber) {
+        try {
+            // Get all fire stations from classpath
+            List<Firestation> fireStationList = readFromResource(firestationResource, new TypeReference<List<Firestation>>() {});
+
+            log.info("Read {} fire stations from classpath", fireStationList.size());
+
+            // Get all persons from classpath
+            List<Person> personList = readFromResource(personResource, new TypeReference<List<Person>>() {});
+
+            // Get addresses covered by this station
+            log.info("Looking for phone numbers for station: '{}'", stationNumber);
+
+            Set<String> addressesCoveredByStation = new java.util.HashSet<>();
+            try {
+                Integer searchStation = Integer.parseInt(stationNumber.trim());
+                for (Firestation fs : fireStationList) {
+                    Integer trimmedStation = fs.getStation();
+                    if (trimmedStation != null && trimmedStation.equals(searchStation)) {
+                        log.info("  MATCH! Adding address: {}", fs.getAddress());
+                        addressesCoveredByStation.add(fs.getAddress());
+                    }
+                }
+            } catch (NumberFormatException e) {
+                log.error("Invalid station number format: {}", stationNumber);
+                return new ArrayList<>();
+            }
+
+            log.info("Addresses covered by station {}: {}", stationNumber, addressesCoveredByStation);
+
+            // Collect phone numbers of persons at addresses covered by this station
+            List<String> phoneNumbers = new ArrayList<>();
+            for (Person person : personList) {
+                if (addressesCoveredByStation.contains(person.getAddress())) {
+                    phoneNumbers.add(person.getPhone());
+                }
+            }
+
+            log.info("Found {} phone numbers for station {}", phoneNumbers.size(), stationNumber);
+            return phoneNumbers;
+        } catch (Exception e) {
+            log.error("Error occurred while retrieving phone numbers for station {}: {}", stationNumber, e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    /**
      * Helper method to read from ClassPathResource
      */
     private <T> List<T> readFromResource(ClassPathResource resource, TypeReference<List<T>> typeReference) throws Exception {
