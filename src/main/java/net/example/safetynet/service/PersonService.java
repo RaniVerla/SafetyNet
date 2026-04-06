@@ -4,6 +4,8 @@ import lombok.extern.slf4j.Slf4j;
 import net.example.safetynet.model.ChildAlertResponse;
 import net.example.safetynet.model.Medicalrecord;
 import net.example.safetynet.model.Person;
+import net.example.safetynet.model.PersonInfo;
+import net.example.safetynet.model.PersonInfoLastNameResponse;
 import net.example.safetynet.utils.ReadFromFileUtil;
 import net.example.safetynet.utils.WriteToFileUtil;
 import org.springframework.core.io.ClassPathResource;
@@ -214,6 +216,70 @@ public class PersonService {
         }
         try (java.io.InputStream inputStream = resource.getInputStream()) {
             return readFromFileUtil.readFromInputStream(inputStream, typeReference);
+        }
+    }
+
+    public List<String> getEmailsByCity(String city) {
+        try {
+            log.info("Fetching emails for city: {}", city);
+            List<Person> personList = readFromFileUtil.readFromFile(filePath, new TypeReference<List<Person>>() {
+            });
+            return personList.stream()
+                    .filter(p -> p.getCity() != null && p.getCity().equalsIgnoreCase(city))
+                    .map(Person::getEmail)
+                    .distinct()
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("Error occurred while fetching emails for city {}: {}", city, e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    public PersonInfoLastNameResponse getPersonInfoByLastName(String lastName) {
+        try {
+            log.info("Fetching person info for last name: {}", lastName);
+            List<Person> personList = readFromFileUtil.readFromFile(filePath, new TypeReference<List<Person>>() {});
+            List<Medicalrecord> medicalRecordList = readFromResource(medicalRecordResource, new TypeReference<List<Medicalrecord>>() {});
+
+            List<PersonInfo> personInfos = personList.stream()
+                    .filter(p -> p.getLastName().equalsIgnoreCase(lastName))
+                    .map(person -> {
+                        Medicalrecord medicalRecord = medicalRecordList.stream()
+                                .filter(m -> m.getFirstName().equalsIgnoreCase(person.getFirstName())
+                                        && m.getLastName().equalsIgnoreCase(person.getLastName()))
+                                .findFirst()
+                                .orElse(null);
+
+                        int age = -1;
+                        List<String> medications = new ArrayList<>();
+                        List<String> allergies = new ArrayList<>();
+
+                        if (medicalRecord != null) {
+                            age = getAge(person, medicalRecordList); // reuse the getAge method
+                            if (medicalRecord.getMedications() != null) {
+                                medications = List.of(medicalRecord.getMedications());
+                            }
+                            if (medicalRecord.getAllergies() != null) {
+                                allergies = List.of(medicalRecord.getAllergies());
+                            }
+                        }
+
+                        return new PersonInfo(
+                                person.getFirstName(),
+                                person.getLastName(),
+                                person.getAddress(),
+                                age,
+                                person.getEmail(),
+                                medications,
+                                allergies
+                        );
+                    })
+                    .collect(Collectors.toList());
+
+            return new PersonInfoLastNameResponse(personInfos);
+        } catch (Exception e) {
+            log.error("Error occurred while fetching person info for last name {}: {}", lastName, e.getMessage());
+            return new PersonInfoLastNameResponse(new ArrayList<>());
         }
     }
 }

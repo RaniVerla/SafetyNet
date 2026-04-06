@@ -21,9 +21,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
-import static org.mockito.Mockito.times;
 
 @ExtendWith(MockitoExtension.class)
 class PersonServiceTest {
@@ -312,5 +310,84 @@ class PersonServiceTest {
         assertNotNull(response);
         assertNotNull(response.getChildren());
         assertTrue(response.getChildren().isEmpty());
+    }
+
+    @Test
+    @DisplayName("Testing getPersonInfoByLastName with valid last name")
+    void getPersonInfoByLastName_shouldReturnPersonInfoForValidLastName() throws Exception {
+        // Given
+        String lastName = "Boyd";
+        List<Person> persons = Arrays.asList(
+                new Person("John", "Boyd", "1509 Culver St", "Culver", "97451", "841-874-6512", "jaboyd@email.com"),
+                new Person("Jacob", "Boyd", "1509 Culver St", "Culver", "97451", "841-874-6513", "drk@email.com")
+        );
+        List<Medicalrecord> medicalRecords = Arrays.asList(
+                new Medicalrecord("John", "Boyd", "03/06/1984", new String[]{"aznol:350mg", "hydrapermazol:100mg"}, new String[]{"nillacilan"}),
+                new Medicalrecord("Jacob", "Boyd", "03/06/1989", new String[]{"pharmacol:5000mg"}, new String[]{})
+        );
+
+        when(readFromFileUtil.readFromFile(any(), any(TypeReference.class))).thenReturn(persons);
+        when(readFromFileUtil.readFromInputStream(any(), any(TypeReference.class))).thenReturn(medicalRecords);
+
+        // When
+        var response = personService.getPersonInfoByLastName(lastName);
+
+        // Then
+        assertNotNull(response);
+        assertEquals(2, response.getPersonInfos().size());
+        assertEquals("John", response.getPersonInfos().get(0).getFirstName());
+        assertEquals("Boyd", response.getPersonInfos().get(0).getLastName());
+        assertEquals(42, response.getPersonInfos().get(0).getAge()); // Assuming current year 2026, 2026-1984=42
+        assertEquals("jaboyd@email.com", response.getPersonInfos().get(0).getEmail());
+        assertEquals(List.of("aznol:350mg", "hydrapermazol:100mg"), response.getPersonInfos().get(0).getMedications());
+        assertEquals(List.of("nillacilan"), response.getPersonInfos().get(0).getAllergies());
+        assertEquals("Jacob", response.getPersonInfos().get(1).getFirstName());
+        assertEquals("Boyd", response.getPersonInfos().get(1).getLastName());
+        assertEquals(37, response.getPersonInfos().get(1).getAge()); // Assuming current year 2026, 2026-1989=37
+        assertEquals("drk@email.com", response.getPersonInfos().get(1).getEmail());
+        assertEquals(List.of("pharmacol:5000mg"), response.getPersonInfos().get(1).getMedications());
+        assertTrue(response.getPersonInfos().get(1).getAllergies().isEmpty());
+    }
+
+    @Test
+    @DisplayName("Testing getPersonInfoByLastName with no matches")
+    void getPersonInfoByLastName_shouldReturnEmptyForNonexistentLastName() throws Exception {
+        // Given
+        String lastName = "Nonexistent";
+        List<Person> persons = Arrays.asList(
+                new Person("John", "Boyd", "1509 Culver St", "Culver", "97451", "841-874-6512", "jaboyd@email.com")
+        );
+        List<Medicalrecord> medicalRecords = Arrays.asList(
+                new Medicalrecord("John", "Boyd", "03/06/1984", new String[]{}, new String[]{})
+        );
+
+        when(readFromFileUtil.readFromFile(any(), any(TypeReference.class))).thenReturn(persons);
+        when(readFromFileUtil.readFromInputStream(any(), any(TypeReference.class))).thenReturn(medicalRecords);
+
+        // When
+        var response = personService.getPersonInfoByLastName(lastName);
+
+        // Then
+        assertNotNull(response);
+        assertTrue(response.getPersonInfos().isEmpty());
+    }
+
+    @Test
+    @DisplayName("Testing getPersonInfoByLastName handles exception")
+    void getPersonInfoByLastName_shouldHandleExceptionGracefully() throws Exception {
+        // Given
+        String lastName = "Boyd";
+
+        // Mock exception during file reading
+        when(readFromFileUtil.readFromFile(any(), any(TypeReference.class)))
+                .thenThrow(new RuntimeException("File read error"));
+
+        // When
+        var response = personService.getPersonInfoByLastName(lastName);
+
+        // Then
+        assertNotNull(response);
+        assertNotNull(response.getPersonInfos());
+        assertTrue(response.getPersonInfos().isEmpty());
     }
 }
