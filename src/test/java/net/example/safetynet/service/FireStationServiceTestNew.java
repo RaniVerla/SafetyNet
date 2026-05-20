@@ -195,25 +195,45 @@ class FireStationServiceTestNew {
      * Verifies that residents from the correct station are returned
      */
     @Test
-    @DisplayName("Get residents for station 3 - should return residents from station 3")
-    void getResidentsByStationNumber_ValidStation() {
-        // This test requires real data from classpath resources
-        // Skipping detailed mocking as it requires complex mocking of ClassPathResource
-        // Tests for this method are covered in integration tests with actual data files
-        assertTrue(true); // Placeholder
+    @DisplayName("Get residents for station 1 - should return residents at covered addresses")
+    void getResidentsByStationNumber_ValidStation() throws Exception {
+        // Given
+        when(readFromFileUtil.readFromInputStream(any(), any()))
+                .thenReturn((List) mockFirestations)
+                .thenReturn((List) mockPersons)
+                .thenReturn((List) mockMedicalRecords);
+
+        // When
+        FireStationResidents result = fireStationService.getResidentsByStationNumber("1");
+
+        // Then
+        assertNotNull(result);
+        assertNotNull(result.getResidents());
+        // Station 1 covers "1509 Culver St" — John, Jacob, Tenley Boyd
+        assertEquals(3, result.getResidents().size());
     }
 
     /**
-     * Test: Get residents for a station with no residents
-     * Verifies that empty list is returned for non-existent station
+     * Test: Get residents for a station with no matching addresses
+     * Verifies that an empty list is returned for a non-existent station
      */
     @Test
     @DisplayName("Get residents for non-existent station - should return empty list")
-    void getResidentsByStationNumber_NoResidents() {
-        // This test requires real data from classpath resources
-        // Skipping detailed mocking as it requires complex mocking of ClassPathResource
-        // Tests for this method are covered in integration tests with actual data files
-        assertTrue(true); // Placeholder
+    void getResidentsByStationNumber_NoResidents() throws Exception {
+        // Given
+        when(readFromFileUtil.readFromInputStream(any(), any()))
+                .thenReturn((List) mockFirestations)
+                .thenReturn((List) mockPersons)
+                .thenReturn((List) mockMedicalRecords);
+
+        // When
+        FireStationResidents result = fireStationService.getResidentsByStationNumber("99");
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result.getResidents().isEmpty());
+        assertEquals(0, result.getAdultCount());
+        assertEquals(0, result.getChildCount());
     }
 
     /**
@@ -222,11 +242,18 @@ class FireStationServiceTestNew {
      */
     @Test
     @DisplayName("Adult count should be calculated correctly")
-    void getResidentsByStationNumber_AdultCountCorrect() {
-        // This test requires real data from classpath resources
-        // Skipping detailed mocking as it requires complex mocking of ClassPathResource
-        // Tests for this method are covered in integration tests with actual data files
-        assertTrue(true); // Placeholder
+    void getResidentsByStationNumber_AdultCountCorrect() throws Exception {
+        // Given — station 1 covers "1509 Culver St": John (1984), Jacob (1989) are adults; Tenley (2012) is a child
+        when(readFromFileUtil.readFromInputStream(any(), any()))
+                .thenReturn((List) mockFirestations)
+                .thenReturn((List) mockPersons)
+                .thenReturn((List) mockMedicalRecords);
+
+        // When
+        FireStationResidents result = fireStationService.getResidentsByStationNumber("1");
+
+        // Then
+        assertEquals(2, result.getAdultCount());
     }
 
     /**
@@ -235,76 +262,221 @@ class FireStationServiceTestNew {
      */
     @Test
     @DisplayName("Child count should be calculated correctly")
-    void getResidentsByStationNumber_ChildCountCorrect() {
-        // This test requires real data from classpath resources
-        // Skipping detailed mocking as it requires complex mocking of ClassPathResource
-        // Tests for this method are covered in integration tests with actual data files
-        assertTrue(true); // Placeholder
+    void getResidentsByStationNumber_ChildCountCorrect() throws Exception {
+        // Given — Tenley Boyd (02/18/2012) is the only child at station 1
+        when(readFromFileUtil.readFromInputStream(any(), any()))
+                .thenReturn((List) mockFirestations)
+                .thenReturn((List) mockPersons)
+                .thenReturn((List) mockMedicalRecords);
+
+        // When
+        FireStationResidents result = fireStationService.getResidentsByStationNumber("1");
+
+        // Then
+        assertEquals(1, result.getChildCount());
     }
 
     /**
      * Test: Resident information structure
-     * Verifies that each resident has all required information
+     * Verifies that each resident has all required fields populated
      */
     @Test
     @DisplayName("Each resident should have complete information")
-    void getResidentsByStationNumber_ResidentInfoComplete() {
-        // This test requires real data from classpath resources
-        // Skipping detailed mocking as it requires complex mocking of ClassPathResource
-        // Tests for this method are covered in integration tests with actual data files
-        assertTrue(true); // Placeholder
+    void getResidentsByStationNumber_ResidentInfoComplete() throws Exception {
+        // Given
+        List<Firestation> firestations = List.of(new Firestation("892 Downing Ct", 2));
+        List<Person> persons = List.of(
+                new Person("Sophia", "Zemicks", "892 Downing Ct", "Culver", "97451", "841-874-7878", "soph@email.com")
+        );
+        List<Medicalrecord> medicalRecords = List.of(
+                createMedicalRecord("Sophia", "Zemicks", "03/06/1988")
+        );
+
+        when(readFromFileUtil.readFromInputStream(any(), any()))
+                .thenReturn((List) firestations)
+                .thenReturn((List) persons)
+                .thenReturn((List) medicalRecords);
+
+        // When
+        FireStationResidents result = fireStationService.getResidentsByStationNumber("2");
+
+        // Then
+        assertNotNull(result);
+        assertEquals(1, result.getResidents().size());
+
+        FireStationResidents.ResidentInfo resident = result.getResidents().get(0);
+        assertEquals("Sophia", resident.getFirstName());
+        assertEquals("Zemicks", resident.getLastName());
+        assertEquals("892 Downing Ct", resident.getAddress());
+        assertEquals("841-874-7878", resident.getPhone());
     }
 
     /**
      * Test: Invalid station number format
-     * Verifies that invalid station numbers are handled gracefully
+     * Verifies that a non-numeric station number is handled gracefully
      */
     @Test
-    @DisplayName("Invalid station number format should return empty list")
-    void getResidentsByStationNumber_InvalidStationNumber() {
-        // This test requires real data from classpath resources
-        // Skipping detailed mocking as it requires complex mocking of ClassPathResource
-        // Tests for this method are covered in integration tests with actual data files
-        assertTrue(true); // Placeholder
+    @DisplayName("Invalid station number format should return empty response")
+    void getResidentsByStationNumber_InvalidStationNumber() throws Exception {
+        // Given
+        when(readFromFileUtil.readFromInputStream(any(), any()))
+                .thenReturn((List) mockFirestations)
+                .thenReturn((List) mockPersons)
+                .thenReturn((List) mockMedicalRecords);
+
+        // When
+        FireStationResidents result = fireStationService.getResidentsByStationNumber("abc");
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result.getResidents().isEmpty());
+        assertEquals(0, result.getAdultCount());
+        assertEquals(0, result.getChildCount());
     }
 
     /**
-     * Test: Residents list is not null on error
-     * Verifies that even on error, a valid empty response is returned
+     * Test: Exception during file reading
+     * Verifies that a valid empty response is returned even when an exception occurs
      */
     @Test
-    @DisplayName("Should return valid response even on error")
-    void getResidentsByStationNumber_HandlesException() {
-        // This test requires real data from classpath resources
-        // Skipping detailed mocking as it requires complex mocking of ClassPathResource
-        // Tests for this method are covered in integration tests with actual data files
-        assertTrue(true); // Placeholder
+    @DisplayName("Should return valid empty response on exception")
+    void getResidentsByStationNumber_HandlesException() throws Exception {
+        // Given
+        when(readFromFileUtil.readFromInputStream(any(), any()))
+                .thenThrow(new RuntimeException("File read error"));
+
+        // When
+        FireStationResidents result = fireStationService.getResidentsByStationNumber("1");
+
+        // Then
+        assertNotNull(result);
+        assertNotNull(result.getResidents());
+        assertTrue(result.getResidents().isEmpty());
+        assertEquals(0, result.getAdultCount());
+        assertEquals(0, result.getChildCount());
     }
 
     /**
-     * Test: Empty database
-     * Verifies handling when there are no fire stations in the database
+     * Test: Empty fire stations list
+     * Verifies handling when there are no fire stations in the data source
      */
     @Test
-    @DisplayName("Should handle empty fire stations database")
-    void getResidentsByStationNumber_EmptyDatabase() {
-        // This test requires real data from classpath resources
-        // Skipping detailed mocking as it requires complex mocking of ClassPathResource
-        // Tests for this method are covered in integration tests with actual data files
-        assertTrue(true); // Placeholder
+    @DisplayName("Should return empty response when fire stations list is empty")
+    void getResidentsByStationNumber_EmptyDatabase() throws Exception {
+        // Given
+        when(readFromFileUtil.readFromInputStream(any(), any()))
+                .thenReturn(new ArrayList<>())
+                .thenReturn((List) mockPersons)
+                .thenReturn((List) mockMedicalRecords);
+
+        // When
+        FireStationResidents result = fireStationService.getResidentsByStationNumber("1");
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result.getResidents().isEmpty());
+        assertEquals(0, result.getAdultCount());
+        assertEquals(0, result.getChildCount());
     }
 
     /**
      * Test: Correct address returned for each resident
-     * Verifies that returned residents have the correct addresses
+     * Verifies that returned residents belong to addresses covered by the requested station
      */
     @Test
-    @DisplayName("Residents should have correct address from their station")
-    void getResidentsByStationNumber_ResidentsHaveCorrectAddress() {
-        // This test requires real data from classpath resources
-        // Skipping detailed mocking as it requires complex mocking of ClassPathResource
-        // Tests for this method are covered in integration tests with actual data files
-        assertTrue(true); // Placeholder
+    @DisplayName("Residents should have addresses covered by the requested station")
+    void getResidentsByStationNumber_ResidentsHaveCorrectAddress() throws Exception {
+        // Given — station 3 covers "834 Binoc Ave" and "748 Townings Dr"
+        List<Person> persons = List.of(
+                new Person("John", "Doe", "834 Binoc Ave", "Culver", "97451", "555-1234", "jdoe@email.com"),
+                new Person("Jane", "Doe", "748 Townings Dr", "Culver", "97451", "555-5678", "jane@email.com"),
+                new Person("Other", "Person", "1509 Culver St", "Culver", "97451", "555-9999", "other@email.com")
+        );
+        List<Medicalrecord> medicalRecords = List.of(
+                createMedicalRecord("John", "Doe", "05/15/1980"),
+                createMedicalRecord("Jane", "Doe", "07/22/1990"),
+                createMedicalRecord("Other", "Person", "01/01/1985")
+        );
+
+        when(readFromFileUtil.readFromInputStream(any(), any()))
+                .thenReturn((List) mockFirestations)
+                .thenReturn((List) persons)
+                .thenReturn((List) medicalRecords);
+
+        // When
+        FireStationResidents result = fireStationService.getResidentsByStationNumber("3");
+
+        // Then
+        assertNotNull(result);
+        assertEquals(2, result.getResidents().size());
+        // All returned residents must live at addresses covered by station 3
+        result.getResidents().forEach(r ->
+                assertTrue(
+                        r.getAddress().equals("834 Binoc Ave") || r.getAddress().equals("748 Townings Dr"),
+                        "Unexpected address: " + r.getAddress()
+                )
+        );
+    }
+
+    /**
+     * Test: Multiple addresses covered by the same station
+     * Verifies that residents from all addresses under a station are included
+     */
+    @Test
+    @DisplayName("Should return residents from all addresses covered by the station")
+    void getResidentsByStationNumber_MultipleAddresses() throws Exception {
+        // Given — station 3 covers two addresses
+        List<Person> persons = List.of(
+                new Person("Alice", "Smith", "834 Binoc Ave", "Culver", "97451", "841-111-1111", "alice@email.com"),
+                new Person("Bob", "Jones", "748 Townings Dr", "Culver", "97451", "841-222-2222", "bob@email.com")
+        );
+        List<Medicalrecord> medicalRecords = List.of(
+                createMedicalRecord("Alice", "Smith", "04/10/1990"),
+                createMedicalRecord("Bob", "Jones", "11/20/1985")
+        );
+
+        when(readFromFileUtil.readFromInputStream(any(), any()))
+                .thenReturn((List) mockFirestations)
+                .thenReturn((List) persons)
+                .thenReturn((List) medicalRecords);
+
+        // When
+        FireStationResidents result = fireStationService.getResidentsByStationNumber("3");
+
+        // Then
+        assertNotNull(result);
+        assertEquals(2, result.getResidents().size());
+        assertEquals(2, result.getAdultCount());
+        assertEquals(0, result.getChildCount());
+    }
+
+    /**
+     * Test: Person without a medical record is treated as adult
+     * Verifies the fallback behaviour when no medical record is found
+     */
+    @Test
+    @DisplayName("Person with no medical record should be counted as adult")
+    void getResidentsByStationNumber_NoMedicalRecord_CountedAsAdult() throws Exception {
+        // Given — no medical records provided
+        List<Firestation> firestations = List.of(new Firestation("1509 Culver St", 1));
+        List<Person> persons = List.of(
+                new Person("Unknown", "Person", "1509 Culver St", "Culver", "97451", "841-000-0000", "unknown@email.com")
+        );
+
+        when(readFromFileUtil.readFromInputStream(any(), any()))
+                .thenReturn((List) firestations)
+                .thenReturn((List) persons)
+                .thenReturn(new ArrayList<>());
+
+        // When
+        FireStationResidents result = fireStationService.getResidentsByStationNumber("1");
+
+        // Then
+        assertNotNull(result);
+        assertEquals(1, result.getResidents().size());
+        // No medical record → isChild returns false → counted as adult
+        assertEquals(1, result.getAdultCount());
+        assertEquals(0, result.getChildCount());
     }
 
 }

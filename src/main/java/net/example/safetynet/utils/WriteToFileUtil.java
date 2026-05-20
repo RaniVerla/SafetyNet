@@ -31,4 +31,20 @@ public class WriteToFileUtil {
             log.error(e.getMessage());
         }
     }
+
+    public <T> void writeObjectToFile(T object, File filePath) {
+        try {
+            if (!filePath.exists()) {
+                filePath.getParentFile().mkdirs();
+                log.info("Created directory: {}", filePath.getParentFile().getAbsolutePath());
+            }
+
+            mapper.writerWithDefaultPrettyPrinter().writeValue(filePath, object);
+
+            log.info("Successfully updated the file :{}", filePath.getAbsolutePath());
+
+        } catch (Exception e) {
+            log.error("Error writing object to file: {}", e.getMessage());
+        }
+    }
 }
