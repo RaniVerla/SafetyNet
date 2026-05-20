@@ -198,10 +198,9 @@ class FireStationServiceTestNew {
     @DisplayName("Get residents for station 1 - should return residents at covered addresses")
     void getResidentsByStationNumber_ValidStation() throws Exception {
         // Given
-        when(readFromFileUtil.readFromInputStream(any(), any()))
-                .thenReturn((List) mockFirestations)
-                .thenReturn((List) mockPersons)
-                .thenReturn((List) mockMedicalRecords);
+        net.example.safetynet.model.Data data = new net.example.safetynet.model.Data(
+                mockPersons, mockFirestations, mockMedicalRecords);
+        when(readFromFileUtil.readObjectFromInputStream(any(), any())).thenReturn(data);
 
         // When
         FireStationResidents result = fireStationService.getResidentsByStationNumber("1");
@@ -221,10 +220,9 @@ class FireStationServiceTestNew {
     @DisplayName("Get residents for non-existent station - should return empty list")
     void getResidentsByStationNumber_NoResidents() throws Exception {
         // Given
-        when(readFromFileUtil.readFromInputStream(any(), any()))
-                .thenReturn((List) mockFirestations)
-                .thenReturn((List) mockPersons)
-                .thenReturn((List) mockMedicalRecords);
+        net.example.safetynet.model.Data data = new net.example.safetynet.model.Data(
+                mockPersons, mockFirestations, mockMedicalRecords);
+        when(readFromFileUtil.readObjectFromInputStream(any(), any())).thenReturn(data);
 
         // When
         FireStationResidents result = fireStationService.getResidentsByStationNumber("99");
@@ -244,10 +242,9 @@ class FireStationServiceTestNew {
     @DisplayName("Adult count should be calculated correctly")
     void getResidentsByStationNumber_AdultCountCorrect() throws Exception {
         // Given — station 1 covers "1509 Culver St": John (1984), Jacob (1989) are adults; Tenley (2012) is a child
-        when(readFromFileUtil.readFromInputStream(any(), any()))
-                .thenReturn((List) mockFirestations)
-                .thenReturn((List) mockPersons)
-                .thenReturn((List) mockMedicalRecords);
+        net.example.safetynet.model.Data data = new net.example.safetynet.model.Data(
+                mockPersons, mockFirestations, mockMedicalRecords);
+        when(readFromFileUtil.readObjectFromInputStream(any(), any())).thenReturn(data);
 
         // When
         FireStationResidents result = fireStationService.getResidentsByStationNumber("1");
@@ -264,10 +261,9 @@ class FireStationServiceTestNew {
     @DisplayName("Child count should be calculated correctly")
     void getResidentsByStationNumber_ChildCountCorrect() throws Exception {
         // Given — Tenley Boyd (02/18/2012) is the only child at station 1
-        when(readFromFileUtil.readFromInputStream(any(), any()))
-                .thenReturn((List) mockFirestations)
-                .thenReturn((List) mockPersons)
-                .thenReturn((List) mockMedicalRecords);
+        net.example.safetynet.model.Data data = new net.example.safetynet.model.Data(
+                mockPersons, mockFirestations, mockMedicalRecords);
+        when(readFromFileUtil.readObjectFromInputStream(any(), any())).thenReturn(data);
 
         // When
         FireStationResidents result = fireStationService.getResidentsByStationNumber("1");
@@ -292,10 +288,9 @@ class FireStationServiceTestNew {
                 createMedicalRecord("Sophia", "Zemicks", "03/06/1988")
         );
 
-        when(readFromFileUtil.readFromInputStream(any(), any()))
-                .thenReturn((List) firestations)
-                .thenReturn((List) persons)
-                .thenReturn((List) medicalRecords);
+        net.example.safetynet.model.Data data = new net.example.safetynet.model.Data(
+                persons, firestations, medicalRecords);
+        when(readFromFileUtil.readObjectFromInputStream(any(), any())).thenReturn(data);
 
         // When
         FireStationResidents result = fireStationService.getResidentsByStationNumber("2");
@@ -318,13 +313,7 @@ class FireStationServiceTestNew {
     @Test
     @DisplayName("Invalid station number format should return empty response")
     void getResidentsByStationNumber_InvalidStationNumber() throws Exception {
-        // Given
-        when(readFromFileUtil.readFromInputStream(any(), any()))
-                .thenReturn((List) mockFirestations)
-                .thenReturn((List) mockPersons)
-                .thenReturn((List) mockMedicalRecords);
-
-        // When
+        // When — invalid format is caught before any file read
         FireStationResidents result = fireStationService.getResidentsByStationNumber("abc");
 
         // Then
@@ -332,6 +321,7 @@ class FireStationServiceTestNew {
         assertTrue(result.getResidents().isEmpty());
         assertEquals(0, result.getAdultCount());
         assertEquals(0, result.getChildCount());
+        verify(readFromFileUtil, never()).readObjectFromInputStream(any(), any());
     }
 
     /**
@@ -342,7 +332,7 @@ class FireStationServiceTestNew {
     @DisplayName("Should return valid empty response on exception")
     void getResidentsByStationNumber_HandlesException() throws Exception {
         // Given
-        when(readFromFileUtil.readFromInputStream(any(), any()))
+        when(readFromFileUtil.readObjectFromInputStream(any(), any()))
                 .thenThrow(new RuntimeException("File read error"));
 
         // When
@@ -363,11 +353,10 @@ class FireStationServiceTestNew {
     @Test
     @DisplayName("Should return empty response when fire stations list is empty")
     void getResidentsByStationNumber_EmptyDatabase() throws Exception {
-        // Given
-        when(readFromFileUtil.readFromInputStream(any(), any()))
-                .thenReturn(new ArrayList<>())
-                .thenReturn((List) mockPersons)
-                .thenReturn((List) mockMedicalRecords);
+        // Given — data.json has no firestations
+        net.example.safetynet.model.Data data = new net.example.safetynet.model.Data(
+                mockPersons, new ArrayList<>(), mockMedicalRecords);
+        when(readFromFileUtil.readObjectFromInputStream(any(), any())).thenReturn(data);
 
         // When
         FireStationResidents result = fireStationService.getResidentsByStationNumber("1");
@@ -388,20 +377,19 @@ class FireStationServiceTestNew {
     void getResidentsByStationNumber_ResidentsHaveCorrectAddress() throws Exception {
         // Given — station 3 covers "834 Binoc Ave" and "748 Townings Dr"
         List<Person> persons = List.of(
-                new Person("John", "Doe", "834 Binoc Ave", "Culver", "97451", "555-1234", "jdoe@email.com"),
-                new Person("Jane", "Doe", "748 Townings Dr", "Culver", "97451", "555-5678", "jane@email.com"),
+                new Person("John",  "Doe",    "834 Binoc Ave",  "Culver", "97451", "555-1234", "jdoe@email.com"),
+                new Person("Jane",  "Doe",    "748 Townings Dr","Culver", "97451", "555-5678", "jane@email.com"),
                 new Person("Other", "Person", "1509 Culver St", "Culver", "97451", "555-9999", "other@email.com")
         );
         List<Medicalrecord> medicalRecords = List.of(
-                createMedicalRecord("John", "Doe", "05/15/1980"),
-                createMedicalRecord("Jane", "Doe", "07/22/1990"),
+                createMedicalRecord("John",  "Doe",    "05/15/1980"),
+                createMedicalRecord("Jane",  "Doe",    "07/22/1990"),
                 createMedicalRecord("Other", "Person", "01/01/1985")
         );
 
-        when(readFromFileUtil.readFromInputStream(any(), any()))
-                .thenReturn((List) mockFirestations)
-                .thenReturn((List) persons)
-                .thenReturn((List) medicalRecords);
+        net.example.safetynet.model.Data data = new net.example.safetynet.model.Data(
+                persons, mockFirestations, medicalRecords);
+        when(readFromFileUtil.readObjectFromInputStream(any(), any())).thenReturn(data);
 
         // When
         FireStationResidents result = fireStationService.getResidentsByStationNumber("3");
@@ -409,7 +397,6 @@ class FireStationServiceTestNew {
         // Then
         assertNotNull(result);
         assertEquals(2, result.getResidents().size());
-        // All returned residents must live at addresses covered by station 3
         result.getResidents().forEach(r ->
                 assertTrue(
                         r.getAddress().equals("834 Binoc Ave") || r.getAddress().equals("748 Townings Dr"),
@@ -427,18 +414,17 @@ class FireStationServiceTestNew {
     void getResidentsByStationNumber_MultipleAddresses() throws Exception {
         // Given — station 3 covers two addresses
         List<Person> persons = List.of(
-                new Person("Alice", "Smith", "834 Binoc Ave", "Culver", "97451", "841-111-1111", "alice@email.com"),
-                new Person("Bob", "Jones", "748 Townings Dr", "Culver", "97451", "841-222-2222", "bob@email.com")
+                new Person("Alice", "Smith", "834 Binoc Ave",   "Culver", "97451", "841-111-1111", "alice@email.com"),
+                new Person("Bob",   "Jones", "748 Townings Dr", "Culver", "97451", "841-222-2222", "bob@email.com")
         );
         List<Medicalrecord> medicalRecords = List.of(
                 createMedicalRecord("Alice", "Smith", "04/10/1990"),
-                createMedicalRecord("Bob", "Jones", "11/20/1985")
+                createMedicalRecord("Bob",   "Jones", "11/20/1985")
         );
 
-        when(readFromFileUtil.readFromInputStream(any(), any()))
-                .thenReturn((List) mockFirestations)
-                .thenReturn((List) persons)
-                .thenReturn((List) medicalRecords);
+        net.example.safetynet.model.Data data = new net.example.safetynet.model.Data(
+                persons, mockFirestations, medicalRecords);
+        when(readFromFileUtil.readObjectFromInputStream(any(), any())).thenReturn(data);
 
         // When
         FireStationResidents result = fireStationService.getResidentsByStationNumber("3");
@@ -463,10 +449,9 @@ class FireStationServiceTestNew {
                 new Person("Unknown", "Person", "1509 Culver St", "Culver", "97451", "841-000-0000", "unknown@email.com")
         );
 
-        when(readFromFileUtil.readFromInputStream(any(), any()))
-                .thenReturn((List) firestations)
-                .thenReturn((List) persons)
-                .thenReturn(new ArrayList<>());
+        net.example.safetynet.model.Data data = new net.example.safetynet.model.Data(
+                persons, firestations, new ArrayList<>());
+        when(readFromFileUtil.readObjectFromInputStream(any(), any())).thenReturn(data);
 
         // When
         FireStationResidents result = fireStationService.getResidentsByStationNumber("1");
