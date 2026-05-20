@@ -2,6 +2,7 @@ package net.example.safetynet.service;
 
 import lombok.extern.slf4j.Slf4j;
 import net.example.safetynet.model.ChildAlertResponse;
+import net.example.safetynet.model.Data;
 import net.example.safetynet.model.Medicalrecord;
 import net.example.safetynet.model.Person;
 import net.example.safetynet.model.PersonInfo;
@@ -32,6 +33,7 @@ public class PersonService {
     // Use ClassPathResource for reading data files
     private final ClassPathResource personResource = new ClassPathResource("/safetynet/person.json");
     private final ClassPathResource medicalRecordResource = new ClassPathResource("/safetynet/medicalrecord.json");
+    private final ClassPathResource dataResource = new ClassPathResource("/safetynet/data.json");
 
     // Keep File for writing (assuming write operations use file system)
     File filePath = new File("src/main/resources/safetynet/person.json");
@@ -128,54 +130,50 @@ public class PersonService {
 
     public ChildAlertResponse getChildrenAtAddress(String address) {
         try {
-            log.info("Step 1: Reading person resource...");
-            List<Person> personList = readFromResource(personResource, new TypeReference<List<Person>>() {});
-            log.info("Step 2: Total persons read: {}", personList.size());
+            // Load all data from data.json
+            Data data = readDataJson();
+            List<Person> personList = data.getPersons() != null ? data.getPersons() : new ArrayList<>();
+            List<Medicalrecord> medicalRecordList = data.getMedicalrecords() != null ? data.getMedicalrecords() : new ArrayList<>();
 
-            List<Medicalrecord> medicalRecordList = readFromResource(medicalRecordResource, new TypeReference<List<Medicalrecord>>() {});
-            log.info("Step 3: Total medical records read: {}", medicalRecordList.size());
-
-
-            log.info("===== Searching for address: '{}' =====", address);
+            log.info("Loaded from data.json — persons: {}, medicalrecords: {}",
+                    personList.size(), medicalRecordList.size());
 
             String normalizedAddress = normalize(address);
 
-            // Get all persons at the address
-            List<Person> household =  personList.stream()
-                    .filter(p -> {
-                        boolean match = normalize(p.getAddress()).equals(normalizedAddress);
-                        if (match) {
-                            log.debug("Matched: {} {}", p.getFirstName(), p.getLastName());
-                        }
-                        return match;
-                    })
+            // All people living at the given address
+            List<Person> household = personList.stream()
+                    .filter(p -> normalize(p.getAddress()).equals(normalizedAddress))
                     .collect(Collectors.toList());
 
-            household.forEach(p -> log.info("Household member: {} {}", p.getFirstName(), p.getLastName()));
-            household.forEach(System.out::println);
+            log.info("Household members at '{}': {}", address, household.size());
 
-            // Log household members' first and last names
-            log.info("Household members at address {}: ", address);
-            for (Person person : household) {
-                log.info("  - {} {}", person.getFirstName(), person.getLastName());
+            if (household.isEmpty()) {
+                return new ChildAlertResponse(new ArrayList<>());
             }
 
             List<ChildAlertResponse.ChildInfo> children = new ArrayList<>();
 
             for (Person person : household) {
                 int age = getAge(person, medicalRecordList);
-                if (age <= 18) {
-                    // This is a child
-                    List<ChildAlertResponse.HouseholdMember> members = household.stream()
-                            .filter(p -> !p.equals(person)) // exclude the child
+                if (age >= 0 && age <= 18) {
+                    // Other household members (everyone else at the address)
+                    List<ChildAlertResponse.HouseholdMember> otherMembers = household.stream()
+                            .filter(p -> !p.equals(person))
                             .map(p -> new ChildAlertResponse.HouseholdMember(p.getFirstName(), p.getLastName()))
                             .collect(Collectors.toList());
 
-                    children.add(new ChildAlertResponse.ChildInfo(person.getFirstName(), person.getLastName(), age, members));
+                    children.add(new ChildAlertResponse.ChildInfo(
+                            person.getFirstName(),
+                            person.getLastName(),
+                            age,
+                            otherMembers
+                    ));
                 }
             }
 
+            log.info("Found {} children at address '{}'", children.size(), address);
             return new ChildAlertResponse(children);
+
         } catch (Exception e) {
             log.error("Error getting children at address {}: {}", address, e.getMessage());
             return new ChildAlertResponse(new ArrayList<>());
@@ -216,6 +214,16 @@ public class PersonService {
         }
         try (java.io.InputStream inputStream = resource.getInputStream()) {
             return readFromFileUtil.readFromInputStream(inputStream, typeReference);
+        }
+    }
+
+    private Data readDataJson() throws Exception {
+        if (!dataResource.exists()) {
+            log.error("data.json resource does not exist at {}", dataResource.getPath());
+            return new Data(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+        }
+        try (java.io.InputStream inputStream = dataResource.getInputStream()) {
+            return readFromFileUtil.readObjectFromInputStream(inputStream, Data.class);
         }
     }
 

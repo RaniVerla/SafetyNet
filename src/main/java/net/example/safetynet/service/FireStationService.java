@@ -2,6 +2,7 @@ package net.example.safetynet.service;
 
 
 import lombok.extern.slf4j.Slf4j;
+import net.example.safetynet.model.Data;
 import net.example.safetynet.model.Firestation;
 import net.example.safetynet.model.FireStationResidents;
 import net.example.safetynet.model.Medicalrecord;
@@ -35,6 +36,7 @@ public class FireStationService {
     private final ClassPathResource firestationResource = new ClassPathResource("/safetynet/firestation.json");
     private final ClassPathResource personResource = new ClassPathResource("/safetynet/person.json");
     private final ClassPathResource medicalRecordResource = new ClassPathResource("/safetynet/medicalrecord.json");
+    private final ClassPathResource dataResource = new ClassPathResource("/safetynet/data.json");
 
     // Keep File for writing (assuming write operations use file system)
     File filePath = new File("src/main/resources/safetynet/firestation.json");
@@ -115,68 +117,54 @@ public class FireStationService {
     }
 
     /**
-     * Get residents covered by a fire station
+     * Get residents covered by a fire station.
+     * Data is sourced from data.json which contains persons, firestations and medicalrecords.
      *
      * @param stationNumber the station number
      * @return FireStationResidents containing residents list and adult/child counts
      */
     public FireStationResidents getResidentsByStationNumber(String stationNumber) {
         try {
-            // Get all fire stations from classpath
-            List<Firestation> fireStationList = readFromResource(firestationResource, new TypeReference<List<Firestation>>() {});
-
-            log.info("Read {} fire stations from classpath", fireStationList.size());
-
-            // Debug: Log all fire stations with station numbers
-            for (Firestation fs : fireStationList) {
-                log.info("Fire Station - Address: '{}', Station: '{}' (Type: {})",
-                    fs.getAddress(), fs.getStation(), fs.getStation().getClass().getSimpleName());
-            }
-
-            // Get all persons from classpath
-            List<Person> personList = readFromResource(personResource, new TypeReference<List<Person>>() {});
-
-            // Get all medical records from classpath
-            List<Medicalrecord> medicalRecordList = readFromResource(medicalRecordResource, new TypeReference<List<Medicalrecord>>() {});
-
-            // Get addresses covered by this station
-            log.info("Looking for station: '{}' (length: {})", stationNumber, stationNumber.length());
-
-            Set<String> addressesCoveredByStation = new java.util.HashSet<>();
+            // Validate station number format up front
+            int searchStation;
             try {
-                Integer searchStation = Integer.parseInt(stationNumber.trim());
-                for (Firestation fs : fireStationList) {
-                    Integer trimmedStation = fs.getStation();
-                    log.info("Comparing firestation '{}' with searchterm '{}'", trimmedStation, searchStation);
-                    if (trimmedStation != null && trimmedStation.equals(searchStation)) {
-                        log.info("  MATCH! Adding address: {}", fs.getAddress());
-                        addressesCoveredByStation.add(fs.getAddress());
-                    } else {
-                        log.info("  No match");
-                    }
-                }
+                searchStation = Integer.parseInt(stationNumber.trim());
             } catch (NumberFormatException e) {
                 log.error("Invalid station number format: {}", stationNumber);
+                return new FireStationResidents(new ArrayList<>(), 0, 0);
             }
 
-            log.info("Addresses covered by station {}: {}", stationNumber, addressesCoveredByStation);
+            // Read all data from data.json
+            Data data = readDataJson();
+            List<Firestation> fireStationList = data.getFirestations() != null ? data.getFirestations() : new ArrayList<>();
+            List<Person> personList = data.getPersons() != null ? data.getPersons() : new ArrayList<>();
+            List<Medicalrecord> medicalRecordList = data.getMedicalrecords() != null ? data.getMedicalrecords() : new ArrayList<>();
 
-            // Filter persons by addresses
+            log.info("Loaded from data.json — firestations: {}, persons: {}, medicalrecords: {}",
+                    fireStationList.size(), personList.size(), medicalRecordList.size());
+
+            // Collect all addresses covered by the requested station
+            Set<String> coveredAddresses = fireStationList.stream()
+                    .filter(fs -> fs.getStation() != null && fs.getStation() == searchStation)
+                    .map(Firestation::getAddress)
+                    .collect(Collectors.toSet());
+
+            log.info("Addresses covered by station {}: {}", stationNumber, coveredAddresses);
+
+            // Build resident list and tally adults / children
             List<FireStationResidents.ResidentInfo> residents = new ArrayList<>();
             int adultCount = 0;
             int childCount = 0;
 
             for (Person person : personList) {
-                if (addressesCoveredByStation.contains(person.getAddress())) {
-                    FireStationResidents.ResidentInfo residentInfo = new FireStationResidents.ResidentInfo(
+                if (coveredAddresses.contains(person.getAddress())) {
+                    residents.add(new FireStationResidents.ResidentInfo(
                             person.getFirstName(),
                             person.getLastName(),
                             person.getAddress(),
                             person.getPhone()
-                    );
-                    residents.add(residentInfo);
+                    ));
 
-                    // Check if person is a child (18 years or younger)
                     if (isChild(person, medicalRecordList)) {
                         childCount++;
                     } else {
@@ -185,8 +173,10 @@ public class FireStationService {
                 }
             }
 
-            log.info("Found {} residents for station {}", residents.size(), stationNumber);
+            log.info("Found {} residents for station {} — adults: {}, children: {}",
+                    residents.size(), stationNumber, adultCount, childCount);
             return new FireStationResidents(residents, adultCount, childCount);
+
         } catch (Exception e) {
             log.error("Error occurred while retrieving residents for station {}: {}", stationNumber, e.getMessage());
             return new FireStationResidents(new ArrayList<>(), 0, 0);
@@ -273,6 +263,19 @@ public class FireStationService {
         } catch (Exception e) {
             log.error("Error occurred while retrieving phone numbers for station {}: {}", stationNumber, e.getMessage());
             return new ArrayList<>();
+        }
+    }
+
+    /**
+     * Helper method to read the aggregated data.json file as a Data object
+     */
+    private Data readDataJson() throws Exception {
+        if (!dataResource.exists()) {
+            log.error("data.json resource does not exist at {}", dataResource.getPath());
+            return new Data(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+        }
+        try (InputStream inputStream = dataResource.getInputStream()) {
+            return readFromFileUtil.readObjectFromInputStream(inputStream, Data.class);
         }
     }
 

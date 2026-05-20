@@ -48,6 +48,15 @@ public class ReadFromFileUtil {
         }
     }
 
+    public <T> T readObjectFromInputStream(InputStream inputStream, Class<T> clazz) {
+        try {
+            return mapper.readValue(inputStream, clazz);
+        } catch (Exception ex) {
+            log.error("Error reading object from input stream :{}", ex.getMessage());
+            throw ex;
+        }
+    }
+
     public ObjectMapper getMapper() {
         return mapper;
     }
