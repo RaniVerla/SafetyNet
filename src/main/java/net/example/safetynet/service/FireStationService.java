@@ -222,44 +222,40 @@ public class FireStationService {
      */
     public List<String> getPhoneNumbersByStationNumber(String stationNumber) {
         try {
-            // Get all fire stations from classpath
-            List<Firestation> fireStationList = readFromResource(firestationResource, new TypeReference<List<Firestation>>() {});
-
-            log.info("Read {} fire stations from classpath", fireStationList.size());
-
-            // Get all persons from classpath
-            List<Person> personList = readFromResource(personResource, new TypeReference<List<Person>>() {});
-
-            // Get addresses covered by this station
-            log.info("Looking for phone numbers for station: '{}'", stationNumber);
-
-            Set<String> addressesCoveredByStation = new java.util.HashSet<>();
+            // Validate station number format up front
+            int searchStation;
             try {
-                Integer searchStation = Integer.parseInt(stationNumber.trim());
-                for (Firestation fs : fireStationList) {
-                    Integer trimmedStation = fs.getStation();
-                    if (trimmedStation != null && trimmedStation.equals(searchStation)) {
-                        log.info("  MATCH! Adding address: {}", fs.getAddress());
-                        addressesCoveredByStation.add(fs.getAddress());
-                    }
-                }
+                searchStation = Integer.parseInt(stationNumber.trim());
             } catch (NumberFormatException e) {
                 log.error("Invalid station number format: {}", stationNumber);
                 return new ArrayList<>();
             }
 
-            log.info("Addresses covered by station {}: {}", stationNumber, addressesCoveredByStation);
+            // Read all data from data.json
+            Data data = readDataJson();
+            List<Firestation> fireStationList = data.getFirestations() != null ? data.getFirestations() : new ArrayList<>();
+            List<Person> personList = data.getPersons() != null ? data.getPersons() : new ArrayList<>();
 
-            // Collect phone numbers of persons at addresses covered by this station
-            List<String> phoneNumbers = new ArrayList<>();
-            for (Person person : personList) {
-                if (addressesCoveredByStation.contains(person.getAddress())) {
-                    phoneNumbers.add(person.getPhone());
-                }
-            }
+            log.info("Loaded from data.json — firestations: {}, persons: {}",
+                    fireStationList.size(), personList.size());
+
+            // Collect all addresses covered by the requested station
+            Set<String> coveredAddresses = fireStationList.stream()
+                    .filter(fs -> fs.getStation() != null && fs.getStation() == searchStation)
+                    .map(Firestation::getAddress)
+                    .collect(Collectors.toSet());
+
+            log.info("Addresses covered by station {}: {}", stationNumber, coveredAddresses);
+
+            // Collect phone numbers of persons at covered addresses
+            List<String> phoneNumbers = personList.stream()
+                    .filter(p -> coveredAddresses.contains(p.getAddress()))
+                    .map(Person::getPhone)
+                    .collect(Collectors.toList());
 
             log.info("Found {} phone numbers for station {}", phoneNumbers.size(), stationNumber);
             return phoneNumbers;
+
         } catch (Exception e) {
             log.error("Error occurred while retrieving phone numbers for station {}: {}", stationNumber, e.getMessage());
             return new ArrayList<>();

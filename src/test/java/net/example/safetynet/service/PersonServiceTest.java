@@ -445,15 +445,17 @@ class PersonServiceTest {
 
     @Test
     @DisplayName("getEmailsByCity — returns emails for persons in the given city")
-    void getEmailsByCity_shouldReturnEmailsForMatchingCity() {
+    void getEmailsByCity_shouldReturnEmailsForMatchingCity() throws Exception {
         // Given
         List<Person> persons = Arrays.asList(
-                new Person("John",   "Boyd",    "1509 Culver St", "Culver", "97451", "841-874-6512", "jaboyd@email.com"),
-                new Person("Jacob",  "Boyd",    "1509 Culver St", "Culver", "97451", "841-874-6513", "drk@email.com"),
-                new Person("Tenley", "Boyd",    "1509 Culver St", "Culver", "97451", "841-874-6512", "tenz@email.com"),
-                new Person("Lily",   "Cooper",  "489 Manchester St", "Springfield", "97451", "841-874-9845", "lily@email.com")
+                new Person("John",   "Boyd",   "1509 Culver St",    "Culver",      "97451", "841-874-6512", "jaboyd@email.com"),
+                new Person("Jacob",  "Boyd",   "1509 Culver St",    "Culver",      "97451", "841-874-6513", "drk@email.com"),
+                new Person("Tenley", "Boyd",   "1509 Culver St",    "Culver",      "97451", "841-874-6512", "tenz@email.com"),
+                new Person("Lily",   "Cooper", "489 Manchester St", "Springfield", "97451", "841-874-9845", "lily@email.com")
         );
-        when(readFromFileUtil.readFromFile(any(), any())).thenReturn((List) persons);
+        net.example.safetynet.model.Data data =
+                new net.example.safetynet.model.Data(persons, new ArrayList<>(), new ArrayList<>());
+        when(readFromFileUtil.readObjectFromInputStream(any(), any())).thenReturn(data);
 
         // When
         List<String> emails = personService.getEmailsByCity("Culver");
@@ -469,12 +471,14 @@ class PersonServiceTest {
 
     @Test
     @DisplayName("getEmailsByCity — returns empty list when no persons match the city")
-    void getEmailsByCity_shouldReturnEmptyListForUnknownCity() {
+    void getEmailsByCity_shouldReturnEmptyListForUnknownCity() throws Exception {
         // Given
         List<Person> persons = Arrays.asList(
                 new Person("John", "Boyd", "1509 Culver St", "Culver", "97451", "841-874-6512", "jaboyd@email.com")
         );
-        when(readFromFileUtil.readFromFile(any(), any())).thenReturn((List) persons);
+        net.example.safetynet.model.Data data =
+                new net.example.safetynet.model.Data(persons, new ArrayList<>(), new ArrayList<>());
+        when(readFromFileUtil.readObjectFromInputStream(any(), any())).thenReturn(data);
 
         // When
         List<String> emails = personService.getEmailsByCity("UnknownCity");
@@ -486,14 +490,16 @@ class PersonServiceTest {
 
     @Test
     @DisplayName("getEmailsByCity — deduplicates emails when multiple persons share the same email")
-    void getEmailsByCity_shouldReturnDistinctEmails() {
+    void getEmailsByCity_shouldReturnDistinctEmails() throws Exception {
         // Given — John and Roger share the same email address
         List<Person> persons = Arrays.asList(
-                new Person("John",   "Boyd", "1509 Culver St", "Culver", "97451", "841-874-6512", "jaboyd@email.com"),
-                new Person("Roger",  "Boyd", "1509 Culver St", "Culver", "97451", "841-874-6512", "jaboyd@email.com"),
-                new Person("Felicia","Boyd", "1509 Culver St", "Culver", "97451", "841-874-6544", "felicia@email.com")
+                new Person("John",    "Boyd", "1509 Culver St", "Culver", "97451", "841-874-6512", "jaboyd@email.com"),
+                new Person("Roger",   "Boyd", "1509 Culver St", "Culver", "97451", "841-874-6512", "jaboyd@email.com"),
+                new Person("Felicia", "Boyd", "1509 Culver St", "Culver", "97451", "841-874-6544", "felicia@email.com")
         );
-        when(readFromFileUtil.readFromFile(any(), any())).thenReturn((List) persons);
+        net.example.safetynet.model.Data data =
+                new net.example.safetynet.model.Data(persons, new ArrayList<>(), new ArrayList<>());
+        when(readFromFileUtil.readObjectFromInputStream(any(), any())).thenReturn(data);
 
         // When
         List<String> emails = personService.getEmailsByCity("Culver");
@@ -507,12 +513,14 @@ class PersonServiceTest {
 
     @Test
     @DisplayName("getEmailsByCity — city matching is case-insensitive")
-    void getEmailsByCity_shouldBeCaseInsensitive() {
+    void getEmailsByCity_shouldBeCaseInsensitive() throws Exception {
         // Given
         List<Person> persons = Arrays.asList(
                 new Person("John", "Boyd", "1509 Culver St", "Culver", "97451", "841-874-6512", "jaboyd@email.com")
         );
-        when(readFromFileUtil.readFromFile(any(), any())).thenReturn((List) persons);
+        net.example.safetynet.model.Data data =
+                new net.example.safetynet.model.Data(persons, new ArrayList<>(), new ArrayList<>());
+        when(readFromFileUtil.readObjectFromInputStream(any(), any())).thenReturn(data);
 
         // When — querying with different casing
         List<String> emails = personService.getEmailsByCity("culver");
@@ -524,8 +532,8 @@ class PersonServiceTest {
     }
 
     @Test
-    @DisplayName("getEmailsByCity — returns empty list when person has null city")
-    void getEmailsByCity_shouldSkipPersonsWithNullCity() {
+    @DisplayName("getEmailsByCity — skips persons with null city without throwing NPE")
+    void getEmailsByCity_shouldSkipPersonsWithNullCity() throws Exception {
         // Given — one person has null city
         Person personWithNullCity = new Person();
         personWithNullCity.setFirstName("Unknown");
@@ -537,7 +545,9 @@ class PersonServiceTest {
                 new Person("John", "Boyd", "1509 Culver St", "Culver", "97451", "841-874-6512", "jaboyd@email.com"),
                 personWithNullCity
         );
-        when(readFromFileUtil.readFromFile(any(), any())).thenReturn((List) persons);
+        net.example.safetynet.model.Data data =
+                new net.example.safetynet.model.Data(persons, new ArrayList<>(), new ArrayList<>());
+        when(readFromFileUtil.readObjectFromInputStream(any(), any())).thenReturn(data);
 
         // When
         List<String> emails = personService.getEmailsByCity("Culver");
@@ -550,10 +560,12 @@ class PersonServiceTest {
     }
 
     @Test
-    @DisplayName("getEmailsByCity — returns empty list when person list is empty")
-    void getEmailsByCity_shouldReturnEmptyListWhenNoPersons() {
+    @DisplayName("getEmailsByCity — returns empty list when persons list is empty")
+    void getEmailsByCity_shouldReturnEmptyListWhenNoPersons() throws Exception {
         // Given
-        when(readFromFileUtil.readFromFile(any(), any())).thenReturn(new ArrayList<>());
+        net.example.safetynet.model.Data data =
+                new net.example.safetynet.model.Data(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+        when(readFromFileUtil.readObjectFromInputStream(any(), any())).thenReturn(data);
 
         // When
         List<String> emails = personService.getEmailsByCity("Culver");
@@ -565,9 +577,9 @@ class PersonServiceTest {
 
     @Test
     @DisplayName("getEmailsByCity — returns empty list on exception")
-    void getEmailsByCity_shouldReturnEmptyListOnException() {
+    void getEmailsByCity_shouldReturnEmptyListOnException() throws Exception {
         // Given
-        when(readFromFileUtil.readFromFile(any(), any()))
+        when(readFromFileUtil.readObjectFromInputStream(any(), any()))
                 .thenThrow(new RuntimeException("File read error"));
 
         // When
@@ -579,15 +591,17 @@ class PersonServiceTest {
     }
 
     @Test
-    @DisplayName("getEmailsByCity — readFromFile is called exactly once")
-    void getEmailsByCity_shouldCallReadFromFileExactlyOnce() {
+    @DisplayName("getEmailsByCity — readObjectFromInputStream is called exactly once")
+    void getEmailsByCity_shouldCallReadObjectFromInputStreamExactlyOnce() throws Exception {
         // Given
-        when(readFromFileUtil.readFromFile(any(), any())).thenReturn(new ArrayList<>());
+        net.example.safetynet.model.Data data =
+                new net.example.safetynet.model.Data(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+        when(readFromFileUtil.readObjectFromInputStream(any(), any())).thenReturn(data);
 
         // When
         personService.getEmailsByCity("Culver");
 
         // Then
-        verify(readFromFileUtil, times(1)).readFromFile(any(), any());
+        verify(readFromFileUtil, times(1)).readObjectFromInputStream(any(), any());
     }
 }

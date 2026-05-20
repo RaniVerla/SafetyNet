@@ -230,8 +230,13 @@ public class PersonService {
     public List<String> getEmailsByCity(String city) {
         try {
             log.info("Fetching emails for city: {}", city);
-            List<Person> personList = readFromFileUtil.readFromFile(filePath, new TypeReference<List<Person>>() {
-            });
+
+            // Read all data from data.json
+            Data data = readDataJson();
+            List<Person> personList = data.getPersons() != null ? data.getPersons() : new ArrayList<>();
+
+            log.info("Loaded {} persons from data.json", personList.size());
+
             return personList.stream()
                     .filter(p -> p.getCity() != null && p.getCity().equalsIgnoreCase(city))
                     .map(Person::getEmail)
