@@ -251,11 +251,17 @@ public class PersonService {
     public PersonInfoLastNameResponse getPersonInfoByLastName(String lastName) {
         try {
             log.info("Fetching person info for last name: {}", lastName);
-            List<Person> personList = readFromFileUtil.readFromFile(filePath, new TypeReference<List<Person>>() {});
-            List<Medicalrecord> medicalRecordList = readFromResource(medicalRecordResource, new TypeReference<List<Medicalrecord>>() {});
+
+            // Read all data from data.json
+            Data data = readDataJson();
+            List<Person> personList = data.getPersons() != null ? data.getPersons() : new ArrayList<>();
+            List<Medicalrecord> medicalRecordList = data.getMedicalrecords() != null ? data.getMedicalrecords() : new ArrayList<>();
+
+            log.info("Loaded {} persons, {} medical records from data.json",
+                    personList.size(), medicalRecordList.size());
 
             List<PersonInfo> personInfos = personList.stream()
-                    .filter(p -> p.getLastName().equalsIgnoreCase(lastName))
+                    .filter(p -> p.getLastName() != null && p.getLastName().equalsIgnoreCase(lastName))
                     .map(person -> {
                         Medicalrecord medicalRecord = medicalRecordList.stream()
                                 .filter(m -> m.getFirstName().equalsIgnoreCase(person.getFirstName())
@@ -268,7 +274,7 @@ public class PersonService {
                         List<String> allergies = new ArrayList<>();
 
                         if (medicalRecord != null) {
-                            age = getAge(person, medicalRecordList); // reuse the getAge method
+                            age = getAge(person, medicalRecordList);
                             if (medicalRecord.getMedications() != null) {
                                 medications = List.of(medicalRecord.getMedications());
                             }

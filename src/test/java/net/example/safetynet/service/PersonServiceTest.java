@@ -376,8 +376,9 @@ class PersonServiceTest {
                 new Medicalrecord("Jacob", "Boyd", "03/06/1989", new String[]{"pharmacol:5000mg"}, new String[]{})
         );
 
-        when(readFromFileUtil.readFromFile(any(), any(TypeReference.class))).thenReturn(persons);
-        when(readFromFileUtil.readFromInputStream(any(), any(TypeReference.class))).thenReturn(medicalRecords);
+        net.example.safetynet.model.Data data =
+                new net.example.safetynet.model.Data(persons, new ArrayList<>(), medicalRecords);
+        when(readFromFileUtil.readObjectFromInputStream(any(), any())).thenReturn(data);
 
         // When
         var response = personService.getPersonInfoByLastName(lastName);
@@ -385,15 +386,14 @@ class PersonServiceTest {
         // Then
         assertNotNull(response);
         assertEquals(2, response.getPersonInfos().size());
-        assertEquals("John", response.getPersonInfos().get(0).getFirstName());
-        assertEquals("Boyd", response.getPersonInfos().get(0).getLastName());
-        assertEquals(42, response.getPersonInfos().get(0).getAge()); // Assuming current year 2026, 2026-1984=42
+        assertEquals("John",  response.getPersonInfos().get(0).getFirstName());
+        assertEquals("Boyd",  response.getPersonInfos().get(0).getLastName());
+        assertEquals(42,      response.getPersonInfos().get(0).getAge());
         assertEquals("jaboyd@email.com", response.getPersonInfos().get(0).getEmail());
         assertEquals(List.of("aznol:350mg", "hydrapermazol:100mg"), response.getPersonInfos().get(0).getMedications());
         assertEquals(List.of("nillacilan"), response.getPersonInfos().get(0).getAllergies());
         assertEquals("Jacob", response.getPersonInfos().get(1).getFirstName());
-        assertEquals("Boyd", response.getPersonInfos().get(1).getLastName());
-        assertEquals(37, response.getPersonInfos().get(1).getAge()); // Assuming current year 2026, 2026-1989=37
+        assertEquals(37,      response.getPersonInfos().get(1).getAge());
         assertEquals("drk@email.com", response.getPersonInfos().get(1).getEmail());
         assertEquals(List.of("pharmacol:5000mg"), response.getPersonInfos().get(1).getMedications());
         assertTrue(response.getPersonInfos().get(1).getAllergies().isEmpty());
@@ -403,7 +403,6 @@ class PersonServiceTest {
     @DisplayName("Testing getPersonInfoByLastName with no matches")
     void getPersonInfoByLastName_shouldReturnEmptyForNonexistentLastName() throws Exception {
         // Given
-        String lastName = "Nonexistent";
         List<Person> persons = Arrays.asList(
                 new Person("John", "Boyd", "1509 Culver St", "Culver", "97451", "841-874-6512", "jaboyd@email.com")
         );
@@ -411,11 +410,12 @@ class PersonServiceTest {
                 new Medicalrecord("John", "Boyd", "03/06/1984", new String[]{}, new String[]{})
         );
 
-        when(readFromFileUtil.readFromFile(any(), any(TypeReference.class))).thenReturn(persons);
-        when(readFromFileUtil.readFromInputStream(any(), any(TypeReference.class))).thenReturn(medicalRecords);
+        net.example.safetynet.model.Data data =
+                new net.example.safetynet.model.Data(persons, new ArrayList<>(), medicalRecords);
+        when(readFromFileUtil.readObjectFromInputStream(any(), any())).thenReturn(data);
 
         // When
-        var response = personService.getPersonInfoByLastName(lastName);
+        var response = personService.getPersonInfoByLastName("Nonexistent");
 
         // Then
         assertNotNull(response);
@@ -426,19 +426,131 @@ class PersonServiceTest {
     @DisplayName("Testing getPersonInfoByLastName handles exception")
     void getPersonInfoByLastName_shouldHandleExceptionGracefully() throws Exception {
         // Given
-        String lastName = "Boyd";
-
-        // Mock exception during file reading
-        when(readFromFileUtil.readFromFile(any(), any(TypeReference.class)))
+        when(readFromFileUtil.readObjectFromInputStream(any(), any()))
                 .thenThrow(new RuntimeException("File read error"));
 
         // When
-        var response = personService.getPersonInfoByLastName(lastName);
+        var response = personService.getPersonInfoByLastName("Boyd");
 
         // Then
         assertNotNull(response);
         assertNotNull(response.getPersonInfos());
         assertTrue(response.getPersonInfos().isEmpty());
+    }
+
+    // ======================= Additional tests for getPersonInfoByLastName =======================
+
+    @Test
+    @DisplayName("getPersonInfoByLastName — last name matching is case-insensitive")
+    void getPersonInfoByLastName_shouldBeCaseInsensitive() throws Exception {
+        List<Person> persons = Arrays.asList(
+                new Person("John", "Boyd", "1509 Culver St", "Culver", "97451", "841-874-6512", "jaboyd@email.com")
+        );
+        List<Medicalrecord> medicalRecords = Arrays.asList(
+                new Medicalrecord("John", "Boyd", "03/06/1984", new String[]{"aznol:350mg"}, new String[]{"nillacilan"})
+        );
+        net.example.safetynet.model.Data data =
+                new net.example.safetynet.model.Data(persons, new ArrayList<>(), medicalRecords);
+        when(readFromFileUtil.readObjectFromInputStream(any(), any())).thenReturn(data);
+
+        var response = personService.getPersonInfoByLastName("boyd"); // lowercase
+
+        assertNotNull(response);
+        assertEquals(1, response.getPersonInfos().size());
+        assertEquals("John", response.getPersonInfos().get(0).getFirstName());
+    }
+
+    @Test
+    @DisplayName("getPersonInfoByLastName — person with no medical record gets age=-1 and empty lists")
+    void getPersonInfoByLastName_shouldHandleMissingMedicalRecord() throws Exception {
+        List<Person> persons = Arrays.asList(
+                new Person("John", "Boyd", "1509 Culver St", "Culver", "97451", "841-874-6512", "jaboyd@email.com")
+        );
+        net.example.safetynet.model.Data data =
+                new net.example.safetynet.model.Data(persons, new ArrayList<>(), new ArrayList<>());
+        when(readFromFileUtil.readObjectFromInputStream(any(), any())).thenReturn(data);
+
+        var response = personService.getPersonInfoByLastName("Boyd");
+
+        assertNotNull(response);
+        assertEquals(1, response.getPersonInfos().size());
+        assertEquals(-1, response.getPersonInfos().get(0).getAge());
+        assertTrue(response.getPersonInfos().get(0).getMedications().isEmpty());
+        assertTrue(response.getPersonInfos().get(0).getAllergies().isEmpty());
+    }
+
+    @Test
+    @DisplayName("getPersonInfoByLastName — all persons with the same last name are returned")
+    void getPersonInfoByLastName_shouldReturnAllPersonsWithSameLastName() throws Exception {
+        List<Person> persons = Arrays.asList(
+                new Person("John",    "Boyd", "1509 Culver St", "Culver", "97451", "841-874-6512", "jaboyd@email.com"),
+                new Person("Jacob",   "Boyd", "1509 Culver St", "Culver", "97451", "841-874-6513", "drk@email.com"),
+                new Person("Tenley",  "Boyd", "1509 Culver St", "Culver", "97451", "841-874-6512", "tenz@email.com"),
+                new Person("Allison", "Boyd", "112 Steppes Pl", "Culver", "97451", "841-874-9888", "aly@imail.com"),
+                new Person("Other",   "Smith","999 Other St",   "Culver", "97451", "000-000-0000", "other@email.com")
+        );
+        List<Medicalrecord> medicalRecords = Arrays.asList(
+                new Medicalrecord("John",    "Boyd", "03/06/1984", new String[]{"aznol:350mg"}, new String[]{"nillacilan"}),
+                new Medicalrecord("Jacob",   "Boyd", "03/06/1989", new String[]{"pharmacol:5000mg"}, new String[]{}),
+                new Medicalrecord("Tenley",  "Boyd", "02/18/2012", new String[]{}, new String[]{"peanut"}),
+                new Medicalrecord("Allison", "Boyd", "03/15/1965", new String[]{"aznol:200mg"}, new String[]{"nillacilan"})
+        );
+        net.example.safetynet.model.Data data =
+                new net.example.safetynet.model.Data(persons, new ArrayList<>(), medicalRecords);
+        when(readFromFileUtil.readObjectFromInputStream(any(), any())).thenReturn(data);
+
+        var response = personService.getPersonInfoByLastName("Boyd");
+
+        assertNotNull(response);
+        // 4 Boyds, 1 Smith — only Boyds returned
+        assertEquals(4, response.getPersonInfos().size());
+        assertTrue(response.getPersonInfos().stream().allMatch(p -> p.getLastName().equals("Boyd")));
+    }
+
+    @Test
+    @DisplayName("getPersonInfoByLastName — response includes address and email for each person")
+    void getPersonInfoByLastName_shouldIncludeAddressAndEmail() throws Exception {
+        List<Person> persons = Arrays.asList(
+                new Person("John", "Boyd", "1509 Culver St", "Culver", "97451", "841-874-6512", "jaboyd@email.com")
+        );
+        List<Medicalrecord> medicalRecords = Arrays.asList(
+                new Medicalrecord("John", "Boyd", "03/06/1984", new String[]{}, new String[]{})
+        );
+        net.example.safetynet.model.Data data =
+                new net.example.safetynet.model.Data(persons, new ArrayList<>(), medicalRecords);
+        when(readFromFileUtil.readObjectFromInputStream(any(), any())).thenReturn(data);
+
+        var response = personService.getPersonInfoByLastName("Boyd");
+
+        assertNotNull(response);
+        assertEquals(1, response.getPersonInfos().size());
+        assertEquals("1509 Culver St",   response.getPersonInfos().get(0).getAddress());
+        assertEquals("jaboyd@email.com", response.getPersonInfos().get(0).getEmail());
+    }
+
+    @Test
+    @DisplayName("getPersonInfoByLastName — returns empty list when persons list is empty")
+    void getPersonInfoByLastName_shouldReturnEmptyWhenNoPersons() throws Exception {
+        net.example.safetynet.model.Data data =
+                new net.example.safetynet.model.Data(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+        when(readFromFileUtil.readObjectFromInputStream(any(), any())).thenReturn(data);
+
+        var response = personService.getPersonInfoByLastName("Boyd");
+
+        assertNotNull(response);
+        assertTrue(response.getPersonInfos().isEmpty());
+    }
+
+    @Test
+    @DisplayName("getPersonInfoByLastName — readObjectFromInputStream is called exactly once")
+    void getPersonInfoByLastName_shouldCallReadObjectFromInputStreamExactlyOnce() throws Exception {
+        net.example.safetynet.model.Data data =
+                new net.example.safetynet.model.Data(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+        when(readFromFileUtil.readObjectFromInputStream(any(), any())).thenReturn(data);
+
+        personService.getPersonInfoByLastName("Boyd");
+
+        verify(readFromFileUtil, times(1)).readObjectFromInputStream(any(), any());
     }
 
     // ======================= Tests for getEmailsByCity =======================

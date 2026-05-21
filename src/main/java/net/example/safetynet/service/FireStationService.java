@@ -3,8 +3,12 @@ package net.example.safetynet.service;
 
 import lombok.extern.slf4j.Slf4j;
 import net.example.safetynet.model.Data;
+import net.example.safetynet.model.FireAlertResponse;
 import net.example.safetynet.model.Firestation;
 import net.example.safetynet.model.FireStationResidents;
+import net.example.safetynet.model.FloodHousehold;
+import net.example.safetynet.model.FloodResident;
+import net.example.safetynet.model.FloodResponse;
 import net.example.safetynet.model.Medicalrecord;
 import net.example.safetynet.model.Person;
 import net.example.safetynet.utils.ReadFromFileUtil;
@@ -22,6 +26,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -184,6 +189,66 @@ public class FireStationService {
     }
 
     /**
+     * Get residents at a specific address along with the fire station number serving it.
+     * Each resident includes name, phone, age, medications and allergies.
+     * Data is sourced from data.json.
+     *
+     * @param address the address to query
+     * @return FireAlertResponse containing station number and list of residents with medical info
+     */
+    public FireAlertResponse getResidentsByAddress(String address) {
+        try {
+            Data data = readDataJson();
+            List<Firestation> fireStationList = data.getFirestations() != null ? data.getFirestations() : new ArrayList<>();
+            List<Person> personList = data.getPersons() != null ? data.getPersons() : new ArrayList<>();
+            List<Medicalrecord> medicalRecordList = data.getMedicalrecords() != null ? data.getMedicalrecords() : new ArrayList<>();
+
+            // Find the station number serving this address (first match)
+            int stationNumber = fireStationList.stream()
+                    .filter(fs -> fs.getAddress() != null && fs.getAddress().equalsIgnoreCase(address))
+                    .map(Firestation::getStation)
+                    .findFirst()
+                    .orElse(0);
+
+            log.info("Station {} serves address '{}'", stationNumber, address);
+
+            // Build resident list for the address
+            List<FireAlertResponse.FireAlertResident> residents = personList.stream()
+                    .filter(p -> p.getAddress() != null && p.getAddress().equalsIgnoreCase(address))
+                    .map(person -> {
+                        Medicalrecord record = medicalRecordList.stream()
+                                .filter(m -> m.getFirstName().equalsIgnoreCase(person.getFirstName())
+                                        && m.getLastName().equalsIgnoreCase(person.getLastName()))
+                                .findFirst()
+                                .orElse(null);
+
+                        int age = record != null ? getAge(record) : -1;
+                        List<String> medications = record != null && record.getMedications() != null
+                                ? List.of(record.getMedications()) : new ArrayList<>();
+                        List<String> allergies = record != null && record.getAllergies() != null
+                                ? List.of(record.getAllergies()) : new ArrayList<>();
+
+                        return new FireAlertResponse.FireAlertResident(
+                                person.getFirstName(),
+                                person.getLastName(),
+                                person.getPhone(),
+                                age,
+                                medications,
+                                allergies
+                        );
+                    })
+                    .collect(Collectors.toList());
+
+            log.info("Found {} residents at address '{}'", residents.size(), address);
+            return new FireAlertResponse(stationNumber, residents);
+
+        } catch (Exception e) {
+            log.error("Error retrieving residents at address '{}': {}", address, e.getMessage());
+            return new FireAlertResponse(0, new ArrayList<>());
+        }
+    }
+
+    /**
      * Check if a person is a child (18 years or younger)
      *
      * @param person the person to check
@@ -259,6 +324,112 @@ public class FireStationService {
         } catch (Exception e) {
             log.error("Error occurred while retrieving phone numbers for station {}: {}", stationNumber, e.getMessage());
             return new ArrayList<>();
+        }
+    }
+
+    /**
+     * Get all households served by one or more fire stations, grouped by address.
+     * Each household lists residents with name, phone, age, medications and allergies.
+     * Accepts a comma-separated list of station numbers.
+     * Data is sourced from data.json.
+     *
+     * @param stationNumbers comma-separated station numbers, e.g. "1,2,3"
+     * @return FloodResponse containing households grouped by address
+     */
+    public FloodResponse getHouseholdsByStations(String stationNumbers) {
+        try {
+            // Parse station numbers
+            Set<Integer> stationSet = new java.util.HashSet<>();
+            for (String s : stationNumbers.split(",")) {
+                try {
+                    stationSet.add(Integer.parseInt(s.trim()));
+                } catch (NumberFormatException e) {
+                    log.warn("Skipping invalid station number: '{}'", s.trim());
+                }
+            }
+
+            if (stationSet.isEmpty()) {
+                log.warn("No valid station numbers provided: '{}'", stationNumbers);
+                return new FloodResponse(new ArrayList<>());
+            }
+
+            // Read all data from data.json
+            Data data = readDataJson();
+            List<Firestation> fireStationList = data.getFirestations() != null ? data.getFirestations() : new ArrayList<>();
+            List<Person> personList = data.getPersons() != null ? data.getPersons() : new ArrayList<>();
+            List<Medicalrecord> medicalRecordList = data.getMedicalrecords() != null ? data.getMedicalrecords() : new ArrayList<>();
+
+            log.info("Loaded from data.json — firestations: {}, persons: {}, medicalrecords: {}",
+                    fireStationList.size(), personList.size(), medicalRecordList.size());
+
+            // Collect all addresses covered by the requested stations
+            Set<String> coveredAddresses = fireStationList.stream()
+                    .filter(fs -> fs.getStation() != null && stationSet.contains(fs.getStation()))
+                    .map(Firestation::getAddress)
+                    .collect(Collectors.toSet());
+
+            log.info("Addresses covered by stations {}: {}", stationNumbers, coveredAddresses);
+
+            // Group persons by address, build FloodHousehold per address
+            Map<String, List<Person>> personsByAddress = personList.stream()
+                    .filter(p -> coveredAddresses.contains(p.getAddress()))
+                    .collect(Collectors.groupingBy(Person::getAddress));
+
+            List<FloodHousehold> households = personsByAddress.entrySet().stream()
+                    .map(entry -> {
+                        String address = entry.getKey();
+                        List<FloodResident> residents = entry.getValue().stream()
+                                .map(person -> {
+                                    Medicalrecord record = medicalRecordList.stream()
+                                            .filter(m -> m.getFirstName().equalsIgnoreCase(person.getFirstName())
+                                                    && m.getLastName().equalsIgnoreCase(person.getLastName()))
+                                            .findFirst()
+                                            .orElse(null);
+
+                                    int age = record != null ? getAge(record) : -1;
+                                    List<String> medications = record != null && record.getMedications() != null
+                                            ? List.of(record.getMedications()) : new ArrayList<>();
+                                    List<String> allergies = record != null && record.getAllergies() != null
+                                            ? List.of(record.getAllergies()) : new ArrayList<>();
+
+                                    return new FloodResident(
+                                            person.getFirstName(),
+                                            person.getLastName(),
+                                            person.getPhone(),
+                                            age,
+                                            medications,
+                                            allergies
+                                    );
+                                })
+                                .collect(Collectors.toList());
+
+                        return new FloodHousehold(address, residents);
+                    })
+                    .collect(Collectors.toList());
+
+            log.info("Found {} households for stations {}", households.size(), stationNumbers);
+            return new FloodResponse(households);
+
+        } catch (Exception e) {
+            log.error("Error retrieving households for stations '{}': {}", stationNumbers, e.getMessage());
+            return new FloodResponse(new ArrayList<>());
+        }
+    }
+
+    /**
+     * Calculate age in years from a medical record's birthdate
+     */
+    private int getAge(Medicalrecord medicalRecord) {
+        if (medicalRecord == null || medicalRecord.getBirthdate() == null) {
+            return -1;
+        }
+        try {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM/dd/yyyy");
+            LocalDate birthDate = LocalDate.parse(medicalRecord.getBirthdate(), formatter);
+            return (int) ChronoUnit.YEARS.between(birthDate, LocalDate.now());
+        } catch (Exception e) {
+            log.error("Error parsing birthdate: {}", e.getMessage());
+            return -1;
         }
     }
 
